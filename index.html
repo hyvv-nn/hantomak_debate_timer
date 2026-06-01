@@ -427,8 +427,8 @@
 
   .speech-timer {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 38px;
-    font-weight: 600;
+    font-size: 64px;
+    font-weight: 700;
   }
   .speech-timer.danger { color: var(--danger) !important; animation: pulse 0.8s ease-in-out infinite; }
 
@@ -642,8 +642,8 @@ const PHASES_BANTOMAK = [
   { id: 3, name: '찬성측 교차조사',  side: 'pro',     time: 180, type: 'single' },
   { id: 4, name: '자유토론',         side: 'both',    time: 720, type: 'dual', speechLimit: 90 },
   { id: 5, name: '숙의시간',         side: 'neutral', time: 60,  type: 'single' },
-  { id: 6, name: '반대 마무리발언',  side: 'con',     time: 180, type: 'single' },
-  { id: 7, name: '찬성 마무리발언',  side: 'pro',     time: 180, type: 'single' },
+  { id: 6, name: '반대 마무리발언',  side: 'con',     time: 120, type: 'single' },
+  { id: 7, name: '찬성 마무리발언',  side: 'pro',     time: 120, type: 'single' },
   { id: 8, name: 'Q&A / FeedBack',  side: 'ending',  time: 0,   type: 'ending' },
 ];
 
@@ -739,6 +739,23 @@ function getMainEl() { return document.getElementById('timerMain-' + currentMode
 /* ============================================
  *  유틸
  * ============================================ */
+let audioCtx = null;
+function playBell() {
+  try {
+    if (!audioCtx) audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+    if (audioCtx.state === 'suspended') audioCtx.resume();
+    const t = audioCtx.currentTime;
+    const osc = audioCtx.createOscillator();
+    const gain = audioCtx.createGain();
+    osc.connect(gain); gain.connect(audioCtx.destination);
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(880, t);
+    gain.gain.setValueAtTime(0.0001, t);
+    gain.gain.exponentialRampToValueAtTime(0.4, t + 0.01);
+    gain.gain.exponentialRampToValueAtTime(0.0001, t + 1.3);
+    osc.start(t); osc.stop(t + 1.4);
+  } catch (e) {}
+}
 function fmt(sec) {
   const m = Math.floor(Math.max(0, sec) / 60);
   const s = Math.max(0, sec) % 60;
@@ -913,6 +930,7 @@ function singlePlay() {
     updateSingleDisplay();
     if (remaining <= 0) {
       stopTimer();
+      playBell();
       $a('playBtn').disabled  = true;
       $a('pauseBtn').disabled = true;
     }
@@ -978,18 +996,18 @@ function dualStart(side) {
 
   if (timer) { clearInterval(timer); timer = null; }
 
-  // 같은 측을 연속 발언하는 경우 speechRemaining 유지, 다른 측이면 90초로 리셋
   if (activeSide !== side) {
     speechRemaining = phase.speechLimit;
+  }
+  // [동기화] 남은 보유시간이 발언 제한보다 적으면 발언시간을 보유시간에 맞춤
+  const sideRemain = (side === 'pro') ? proRemaining : conRemaining;
+  if (speechRemaining > sideRemain) {
+    speechRemaining = sideRemain;
   }
 
   activeSide = side;
   dualRunning = true;
 
-  // 절대시간 기준점 설정
-  // - startTime: 보유시간 감소 시작점
-  // - initialRemaining: 보유시간 시작 시점 값 (해당 측의 현재 보유 잔량)
-  // - dualSpeechStart / dualSpeechInitial: 발언시간용
   startTime = performance.now();
   initialRemaining = (side === 'pro') ? proRemaining : conRemaining;
   dualSpeechStart = performance.now();
@@ -1011,12 +1029,11 @@ function dualStart(side) {
 
   $a('proSide').classList.toggle('active-side', side === 'pro');
   $a('conSide').classList.toggle('active-side', side === 'con');
-  $a('proBtn').disabled = (side === 'pro');
-  $a('conBtn').disabled = (side === 'con');
+  $a('proBtn').disabled = (side === 'pro') || (proRemaining <= 0);
+  $a('conBtn').disabled = (side === 'con') || (conRemaining <= 0);
   $a('dualPauseBtn').disabled = false;
 
   timer = setInterval(() => {
-    // 절대시간 기반 경과 계산
     const elapsedHold = Math.floor((performance.now() - startTime) / 1000);
     const elapsedSpeech = Math.floor((performance.now() - dualSpeechStart) / 1000);
 
@@ -1032,10 +1049,11 @@ function dualStart(side) {
     if (speechRemaining <= 0) {
       clearInterval(timer); timer = null;
       dualRunning = false;
+      if (proRemaining > 0 && conRemaining > 0) playBell();
       activeSide = null;
       speechRemaining = phase.speechLimit;
-      $a('proBtn').disabled = false;
-      $a('conBtn').disabled = false;
+      $a('proBtn').disabled = (proRemaining <= 0);
+      $a('conBtn').disabled = (conRemaining <= 0);
       $a('proSide').classList.remove('active-side');
       $a('conSide').classList.remove('active-side');
       $a('proSpeech').textContent = fmt(phase.speechLimit);
@@ -1047,8 +1065,12 @@ function dualStart(side) {
     if (proRemaining <= 0 || conRemaining <= 0) {
       clearInterval(timer); timer = null;
       dualRunning = false;
-      if (proRemaining <= 0) $a('proBtn').disabled = true;
-      if (conRemaining <= 0) $a('conBtn').disabled = true;
+      playBell();
+      activeSide = null;
+      $a('proBtn').disabled = (proRemaining <= 0);
+      $a('conBtn').disabled = (conRemaining <= 0);
+      $a('proSide').classList.remove('active-side');
+      $a('conSide').classList.remove('active-side');
       if (proRemaining <= 0 && conRemaining <= 0) {
         $a('dualPauseBtn').disabled = true;
       }
@@ -1059,8 +1081,8 @@ function dualStart(side) {
 function dualPause() {
   if (timer) { clearInterval(timer); timer = null; }
   dualRunning = false;
-  $a('proBtn').disabled = false;
-  $a('conBtn').disabled = false;
+  $a('proBtn').disabled = (proRemaining <= 0);
+  $a('conBtn').disabled = (conRemaining <= 0);
   $a('dualPauseBtn').disabled = true;
 }
 
