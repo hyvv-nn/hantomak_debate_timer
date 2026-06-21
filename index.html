@@ -142,7 +142,7 @@
     border: 1px solid rgba(0,0,0,0.15);
     color: var(--pro-blue);
     cursor: pointer;
-    font-size: 18px;
+    font-size: 21px;
     font-weight: 700;
     font-family: 'Noto Sans KR', sans-serif;
     display: flex;
@@ -178,7 +178,7 @@
     border-radius: 6px;
     cursor: pointer;
     font-family: 'Noto Sans KR', sans-serif;
-    font-size: 13px;
+    font-size: 15px;
     font-weight: 600;
     margin-bottom: 12px;
     opacity: 0.7;
@@ -187,7 +187,7 @@
   .back-btn:hover { opacity: 1; }
 
   .nav-title {
-    font-size: 11px;
+    font-size: 13px;
     font-weight: 700;
     letter-spacing: 1px;
     opacity: 0.5;
@@ -327,13 +327,13 @@
   body.mode-con .phase-btn.active span { color: #000000; }
 
   h1 {
-    font-size: 32px;
+    font-size: 37px;
     font-weight: 900;
     letter-spacing: -1px;
     margin-bottom: 4px;
   }
   .info-text {
-    font-size: 13px;
+    font-size: 15px;
     opacity: 0.7;
     margin-bottom: 24px;
   }
@@ -356,7 +356,7 @@
   
 
   .phase-title {
-    font-size: 24px;
+    font-size: 28px;
     font-weight: 700;
     text-align: center;
   }
@@ -370,7 +370,7 @@
 
   .time-display {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 120px;
+    font-size: 138px;
     font-weight: 700;
     letter-spacing: 2px;
     line-height: 1;
@@ -412,22 +412,22 @@
 
   .dual-side.active-side { opacity: 1; border-width: 3px; }
 
-  .side-label { font-size: 22px; font-weight: 700; letter-spacing: 1px; }
+  .side-label { font-size: 25px; font-weight: 700; letter-spacing: 1px; }
 
   .dual-time {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 120px;
+    font-size: 138px;
     font-weight: 700;
     line-height: 1;
     letter-spacing: 2px;
   }
   .dual-time.danger { color: var(--danger) !important; animation: pulse 0.8s ease-in-out infinite; }
 
-  .speech-timer-label { font-size: 13px; opacity: 0.75; font-weight: 600; }
+  .speech-timer-label { font-size: 15px; opacity: 0.75; font-weight: 600; }
 
   .speech-timer {
     font-family: 'JetBrains Mono', monospace;
-    font-size: 64px;
+    font-size: 96px;
     font-weight: 700;
   }
   .speech-timer.danger { color: var(--danger) !important; animation: pulse 0.8s ease-in-out infinite; }
@@ -440,7 +440,7 @@
     border-radius: 6px;
     cursor: pointer;
     font-family: 'Noto Sans KR', sans-serif;
-    font-size: 14px;
+    font-size: 16px;
     font-weight: 700;
     transition: all 0.15s;
   }
@@ -465,7 +465,7 @@
     border-radius: 8px;
     cursor: pointer;
     font-family: 'Noto Sans KR', sans-serif;
-    font-size: 15px;
+    font-size: 17px;
     font-weight: 700;
     transition: all 0.15s;
   }
@@ -514,8 +514,8 @@
       border-right: none;
       border-bottom: 1px solid rgba(127,127,127,0.25);
     }
-    .time-display { font-size: 80px; }
-    .dual-time { font-size: 40px; }
+    .time-display { font-size: 92px; }
+    .dual-time { font-size: 46px; }
   }
 
   /* ===== 종료(Q&A FeedBack) 화면 ===== */
@@ -559,23 +559,23 @@
     to   { opacity: 1; transform: scale(1); }
   }
   .ending-screen .ending-title {
-    font-family: 'Playfair Display', 'Georgia', serif;
+    font-family: 'Noto Sans KR', sans-serif;
     font-size: 120px;
     font-weight: 700;
-    font-style: italic;
-    letter-spacing: 6px;
+    font-style: normal;
+    letter-spacing: 0;
     line-height: 1.1;
   }
   .ending-screen .ending-subtitle {
-    font-family: 'Playfair Display', 'Georgia', serif;
+    font-family: 'Noto Sans KR', sans-serif;
     font-size: 80px;
     font-weight: 400;
-    letter-spacing: 14px;
+    letter-spacing: 0;
     opacity: 0.9;
   }
   @media (max-width: 720px) {
-    .ending-screen .ending-title { font-size: 64px; letter-spacing: 4px; }
-    .ending-screen .ending-subtitle { font-size: 44px; letter-spacing: 8px; }
+    .ending-screen .ending-title { font-size: 64px; letter-spacing: 0; }
+    .ending-screen .ending-subtitle { font-size: 44px; letter-spacing: 0; }
   }
 </style>
 </head>
@@ -1018,12 +1018,12 @@ function dualStart(side) {
   if (side === 'pro') {
     proSpeechEl.textContent = fmt(speechRemaining);
     proSpeechEl.className   = 'speech-timer';
-    conSpeechEl.textContent = fmt(phase.speechLimit);
+    conSpeechEl.textContent = fmt(Math.min(phase.speechLimit, conRemaining));
     conSpeechEl.className   = 'speech-timer';
   } else {
     conSpeechEl.textContent = fmt(speechRemaining);
     conSpeechEl.className   = 'speech-timer';
-    proSpeechEl.textContent = fmt(phase.speechLimit);
+    proSpeechEl.textContent = fmt(Math.min(phase.speechLimit, proRemaining));
     proSpeechEl.className   = 'speech-timer';
   }
 
@@ -1046,31 +1046,26 @@ function dualStart(side) {
 
     updateDualDisplay();
 
-    if (speechRemaining <= 0) {
+    // 발언 종료 판정: '발언 제한 도달' 또는 '발언 중인 측의 보유시간 소진'
+    // (다른 측이 이미 0이어도 현재 발언 측에는 영향 없음 → 버튼 잠금 버그 방지)
+    const activeRemain = (activeSide === 'pro') ? proRemaining : conRemaining;
+    if (speechRemaining <= 0 || activeRemain <= 0) {
       clearInterval(timer); timer = null;
       dualRunning = false;
-      if (proRemaining > 0 && conRemaining > 0) playBell();
+      playBell();  // 한 번의 종료 이벤트에 종소리 정확히 1회
       activeSide = null;
       speechRemaining = phase.speechLimit;
-      $a('proBtn').disabled = (proRemaining <= 0);
-      $a('conBtn').disabled = (conRemaining <= 0);
       $a('proSide').classList.remove('active-side');
       $a('conSide').classList.remove('active-side');
-      $a('proSpeech').textContent = fmt(phase.speechLimit);
+      // 버튼 disabled는 '해당 측 보유시간이 0인가'만으로 판정
+      $a('proBtn').disabled = (proRemaining <= 0);
+      $a('conBtn').disabled = (conRemaining <= 0);
+      // 발언시간 표시는 min(발언 제한, 해당 측 보유 잔여)으로 보정
+      $a('proSpeech').textContent = fmt(Math.min(phase.speechLimit, proRemaining));
       $a('proSpeech').className   = 'speech-timer';
-      $a('conSpeech').textContent = fmt(phase.speechLimit);
+      $a('conSpeech').textContent = fmt(Math.min(phase.speechLimit, conRemaining));
       $a('conSpeech').className   = 'speech-timer';
-    }
-
-    if (proRemaining <= 0 || conRemaining <= 0) {
-      clearInterval(timer); timer = null;
-      dualRunning = false;
-      playBell();
-      activeSide = null;
-      $a('proBtn').disabled = (proRemaining <= 0);
-      $a('conBtn').disabled = (conRemaining <= 0);
-      $a('proSide').classList.remove('active-side');
-      $a('conSide').classList.remove('active-side');
+      // 양측 모두 소진된 경우에만 정지 버튼 비활성화
       if (proRemaining <= 0 && conRemaining <= 0) {
         $a('dualPauseBtn').disabled = true;
       }
